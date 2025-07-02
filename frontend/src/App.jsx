@@ -4,6 +4,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
 import ProtectedRoute from "./ProtectedRoute";
+import Templates from "./pages/Templates";
 import './App.css';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
