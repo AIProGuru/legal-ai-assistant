@@ -26,7 +26,16 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
           nvm use 24
-          cd /home/thomas/your-app-folder
+
+          # Go to frontend, install deps and build
+          cd /home/thomas/legal-ai-assistant/frontend
           npm install
           npm run build
+
+          # (Optional) Go to backend and install deps
+          cd ../backend
+          npm install
+
+          # (Optional) Restart service if you use systemd, PM2, etc.
+          sudo systemctl restart your-backend-service
         EOF
