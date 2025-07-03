@@ -23,7 +23,7 @@ function App() {
           }
         />
         <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
-      </Routes>
+      </Routes> 
     </BrowserRouter>
   );
 }
