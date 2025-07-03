@@ -37,5 +37,5 @@ jobs:
           npm install
 
           # (Optional) Restart service if you use systemd, PM2, etc.
-          sudo systemctl restart legal-backend
+          sudo -n /usr/bin/systemctl restart legal-backend
         EOF
