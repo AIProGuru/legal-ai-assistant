@@ -28,7 +28,7 @@ jobs:
           nvm use 24
 
           # Go to frontend, install deps and build
-          cd /home/thomas/legal-ai-assistant/frontend
+          cd /var/www/legal-ai-assistant/frontend
           npm install
           npm run build
 
@@ -37,5 +37,5 @@ jobs:
           npm install
 
           # (Optional) Restart service if you use systemd, PM2, etc.
-          sudo systemctl restart your-backend-service
+          sudo systemctl restart legal-backend
         EOF
