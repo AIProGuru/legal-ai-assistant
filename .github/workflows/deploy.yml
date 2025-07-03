@@ -19,22 +19,14 @@ jobs:
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to VPS
+    - name: Deploy via SSH
       run: |
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no thomas@${{ secrets.VPS_HOST }} << 'EOF'
-          cd /var/www/legal-ai-assistant
-          git pull origin main
-
-          # Backend
-          cd backend
-          npm install
-          sudo systemctl restart legal-backend
-
-          # Frontend
-          cd ../frontend
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+          nvm use 24
+          cd /home/thomas/your-app-folder
           npm install
           npm run build
-
-          # Optionally reload Nginx if static files updated
-          sudo systemctl reload nginx
         EOF
