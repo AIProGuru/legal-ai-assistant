@@ -9,7 +9,7 @@ export default function TemplateSelect() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/templates")
+    fetch(`API_BASE}/templates`)
       .then((res) => res.json())
       .then(setTemplates);
   }, []);

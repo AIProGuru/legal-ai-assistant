@@ -5,14 +5,14 @@ export default function Templates() {
   const [templates, setTemplates] = useState([]);
 
   const fetchTemplates = async () => {
-    const res = await fetch("http://localhost:4000/api/templates");
+    const res = await fetch(`${API_BASE}/templates`);
     const data = await res.json();
     setTemplates(data);
   };
 
   const deleteTemplate = async (id) => {
     if (!window.confirm("Delete this template?")) return;
-    await fetch(`http://localhost:4000/api/templates/${id}`, { method: "DELETE" });
+    await fetch(`${API_BASE}/templates/${id}`, { method: "DELETE" });
     fetchTemplates();
   };
 

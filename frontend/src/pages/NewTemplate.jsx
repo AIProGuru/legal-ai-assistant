@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function NewTemplate() {
+    const API_BASE = import.meta.env.VITE_API_BASE_URL;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [sections, setSections] = useState([{ title: "", requires_vector_search: false, requires_meilisearch: false }]);
@@ -9,7 +10,7 @@ export default function NewTemplate() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await fetch("http://localhost:4000/api/templates", {
+    const res = await fetch(`${API_BASE}/templates`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, sections }),
@@ -17,7 +18,7 @@ export default function NewTemplate() {
 
     if (res.ok) {
       alert("Template created!");
-      navigate("/templates");
+      navigate("/admin/templates");
     }
   };
 
