@@ -32,6 +32,7 @@ function App() {
         <Route path="/admin/upload" element={<ProtectedRoute><AdminUpload /></ProtectedRoute>} />
         <Route path="/draft/start" element={<TemplateSelect />} />
         <Route path="/draft/:templateId" element={<CaseDrafting />} />
+        {/* // to see how it works */}
 
       </Routes>
     </BrowserRouter>

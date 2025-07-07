@@ -27,12 +27,16 @@ jobs:
           [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
           nvm use 24
 
-          # Go to frontend, install deps and build
-          cd /var/www/legal-ai-assistant/frontend
+          # Go to project root and pull latest changes
+          cd /var/www/legal-ai-assistant
+          git pull origin main
+
+          # Frontend: install dependencies and build
+          cd frontend
           npm install
           npm run build
 
-          # (Optional) Go to backend and install deps
+          # Backend: install dependencies
           cd ../backend
           npm install
 
