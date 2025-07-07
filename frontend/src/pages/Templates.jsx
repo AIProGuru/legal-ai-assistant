@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 export default function Templates() {
   const [templates, setTemplates] = useState([]);
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const fetchTemplates = async () => {
     const res = await fetch(`${API_BASE}/templates`);
@@ -24,7 +25,7 @@ export default function Templates() {
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Templates</h1>
-        <Link to="/templates/new" className="bg-blue-600 text-white px-4 py-2 rounded">
+        <Link to="/admin/templates/new" className="bg-blue-600 text-white px-4 py-2 rounded">
           + New Template
         </Link>
       </div>

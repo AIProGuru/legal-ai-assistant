@@ -7,9 +7,10 @@ export default function TemplateSelect() {
   const [templates, setTemplates] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const navigate = useNavigate();
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    fetch(`API_BASE}/templates`)
+    fetch(`${API_BASE}/templates`)
       .then((res) => res.json())
       .then(setTemplates);
   }, []);

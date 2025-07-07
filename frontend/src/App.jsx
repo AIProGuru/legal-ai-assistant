@@ -28,7 +28,7 @@ function App() {
           }
         />
         <Route path="/admin/templates" element={<Templates />} />
-        <Route path="/templates/new" element={<ProtectedRoute><NewTemplate /></ProtectedRoute>} />
+        <Route path="/admin/templates/new" element={<ProtectedRoute><NewTemplate /></ProtectedRoute>} />
         <Route path="/admin/upload" element={<ProtectedRoute><AdminUpload /></ProtectedRoute>} />
         <Route path="/draft/start" element={<TemplateSelect />} />
         <Route path="/draft/:templateId" element={<CaseDrafting />} />

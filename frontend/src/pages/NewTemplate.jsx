@@ -52,7 +52,7 @@ export default function NewTemplate() {
               }
             />
             <div className="flex space-x-4 items-center">
-              <label>
+              {/* <label>
                 <input
                   type="checkbox"
                   checked={s.requires_vector_search}
@@ -63,7 +63,7 @@ export default function NewTemplate() {
                   }
                 />{" "}
                 Vector Search
-              </label>
+              </label> */}
               <label>
                 <input
                   type="checkbox"
