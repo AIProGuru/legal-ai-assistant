@@ -23,8 +23,8 @@ export default function Login() {
       if (res.ok) {
         const data = await res.json();
         login(data.token);
-        alert("Logged in!");
-        navigate("/dashboard");
+        // alert("Logged in!");
+        navigate("/draft/start");
       } else {
         alert("Invalid credentials");
       }

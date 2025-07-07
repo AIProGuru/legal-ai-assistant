@@ -1,35 +1,63 @@
 const express = require("express");
 const router = express.Router();
+const Template = require("../models/Template");
+const upload = require("../middleware/upload");
+const { handleUpload } = require("../middleware/uploadController");
 
-// In-memory store for now, replace with DB later
-let templates = [];
-
-// Get all templates
-router.get("/", (req, res) => {
+// GET all templates
+router.get("/", async (req, res) => {
+  const templates = await Template.find().sort({ createdAt: -1 });
   res.json(templates);
 });
 
-// Create a new template
-router.post("/", (req, res) => {
-  const { name, description, sections } = req.body;
-  if (!name || !sections || !Array.isArray(sections)) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-  const newTemplate = {
-    id: templates.length + 1,
-    name,
-    description: description || "",
-    sections,
-  };
-  templates.push(newTemplate);
-  res.status(201).json(newTemplate);
-});
-
-// Get template by id
-router.get("/:id", (req, res) => {
-  const template = templates.find((t) => t.id === parseInt(req.params.id));
-  if (!template) return res.status(404).json({ error: "Template not found" });
+// GET single template
+router.get("/:id", async (req, res) => {
+  const template = await Template.findById(req.params.id);
+  if (!template) return res.status(404).json({ error: "Not found" });
   res.json(template);
 });
 
-module.exports = router;
+// POST create new template
+router.post("/", async (req, res) => {
+  try {
+    const { name, description, sections } = req.body;
+    const newTemplate = await Template.create({ name, description, sections });
+    res.status(201).json(newTemplate);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE template
+router.delete("/:id", async (req, res) => {
+  await Template.findByIdAndDelete(req.params.id);
+  res.json({ message: "Deleted" });
+});
+
+// POST /api/templates/upload
+router.post("/upload", upload.array("files", 10), handleUpload);
+
+
+
+router.get("/:id/files", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const template = await Template.findById(id);
+    if (!template) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    const files = (template.uploadedFiles || []).map((file) => ({
+      filename: file.originalName || file.filename,
+      url: `/uploads/${file.filename}`,
+    }));
+
+    res.json(files);
+  } catch (err) {
+    console.error("Failed to fetch uploaded files:", err);
+    res.status(500).json({ error: "Failed to fetch files" });
+  }
+});
+
+module.exports = router

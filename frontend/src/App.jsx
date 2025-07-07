@@ -5,6 +5,11 @@ import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
 import ProtectedRoute from "./ProtectedRoute";
 import Templates from "./pages/Templates";
+import NewTemplate from "./pages/NewTemplate";
+import AdminUpload from "./pages/AdminUpload";
+import CaseDrafting from "./pages/CaseDrafting";
+import TemplateSelect from "./pages/TemplateSelect";
+
 import './App.css';
 
 function App() {
@@ -22,8 +27,13 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
-      </Routes> 
+        <Route path="/admin/templates" element={<Templates />} />
+        <Route path="/templates/new" element={<ProtectedRoute><NewTemplate /></ProtectedRoute>} />
+        <Route path="/admin/upload" element={<ProtectedRoute><AdminUpload /></ProtectedRoute>} />
+        <Route path="/draft/start" element={<TemplateSelect />} />
+        <Route path="/draft/:templateId" element={<CaseDrafting />} />
+
+      </Routes>
     </BrowserRouter>
   );
 }
