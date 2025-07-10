@@ -45,12 +45,21 @@ export default function Templates() {
                   <p className="text-sm text-gray-600 mt-1">{t.description}</p>
                 )}
               </div>
-              <button
-                onClick={() => deleteTemplate(t._id)}
-                className="text-red-600 font-semibold hover:underline"
-              >
-                Delete
-              </button>
+              <div className="flex gap-3">
+                <Link
+                  to={`/admin/templates/${t._id}/edit`}
+                  className="text-blue-600 font-semibold hover:underline"
+                >
+                  Edit
+                </Link>
+                <button
+                  onClick={() => deleteTemplate(t._id)}
+                  className="text-red-600 font-semibold hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+
             </div>
 
             <div className="mt-4 space-y-3">

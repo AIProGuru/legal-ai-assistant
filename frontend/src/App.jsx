@@ -9,6 +9,7 @@ import NewTemplate from "./pages/NewTemplate";
 import AdminUpload from "./pages/AdminUpload";
 import CaseDrafting from "./pages/CaseDrafting";
 import TemplateSelect from "./pages/TemplateSelect";
+import EditTemplate from "@/pages/admin/EditTemplate";
 
 import './App.css';
 
@@ -30,6 +31,7 @@ function App() {
         <Route path="/admin/templates" element={<Templates />} />
         <Route path="/admin/templates/new" element={<ProtectedRoute><NewTemplate /></ProtectedRoute>} />
         <Route path="/admin/upload" element={<ProtectedRoute><AdminUpload /></ProtectedRoute>} />
+        <Route path="/admin/templates/:id/edit" element={<ProtectedRoute><EditTemplate /></ProtectedRoute>} />
         <Route path="/draft/start" element={<TemplateSelect />} />
         <Route path="/draft/:templateId" element={<CaseDrafting />} />
         {/* // to see how it works */}

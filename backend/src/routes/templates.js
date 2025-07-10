@@ -60,4 +60,22 @@ router.get("/:id/files", async (req, res) => {
   }
 });
 
+// PUT /templates/:id — Update a template
+router.put("/:id", async (req, res) => {
+  try {
+    const { name, description, sections } = req.body;
+    const updated = await Template.findByIdAndUpdate(
+      req.params.id,
+      { name, description, sections },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return res.status(404).json({ error: "Template not found" });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update template" });
+  }
+});
+
+
 module.exports = router
