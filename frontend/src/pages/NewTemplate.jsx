@@ -2,10 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function NewTemplate() {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [sections, setSections] = useState([{ title: "", requires_vector_search: false, requires_meilisearch: false }]);
+  const [sections, setSections] = useState([
+    {
+      title: "",
+      description: "",
+      requires_vector_search: false,
+      requires_meilisearch: false,
+    },
+  ]);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -47,30 +54,36 @@ export default function NewTemplate() {
               value={s.title}
               onChange={(e) =>
                 setSections((prev) =>
-                  prev.map((sec, idx) => (idx === i ? { ...sec, title: e.target.value } : sec))
+                  prev.map((sec, idx) =>
+                    idx === i ? { ...sec, title: e.target.value } : sec
+                  )
+                )
+              }
+            />
+            <textarea
+              className="w-full border px-2 py-1 rounded"
+              placeholder="Section Description (optional)"
+              value={s.description}
+              onChange={(e) =>
+                setSections((prev) =>
+                  prev.map((sec, idx) =>
+                    idx === i ? { ...sec, description: e.target.value } : sec
+                  )
                 )
               }
             />
             <div className="flex space-x-4 items-center">
-              {/* <label>
-                <input
-                  type="checkbox"
-                  checked={s.requires_vector_search}
-                  onChange={(e) =>
-                    setSections((prev) =>
-                      prev.map((sec, idx) => (idx === i ? { ...sec, requires_vector_search: e.target.checked } : sec))
-                    )
-                  }
-                />{" "}
-                Vector Search
-              </label> */}
               <label>
                 <input
                   type="checkbox"
                   checked={s.requires_meilisearch}
                   onChange={(e) =>
                     setSections((prev) =>
-                      prev.map((sec, idx) => (idx === i ? { ...sec, requires_meilisearch: e.target.checked } : sec))
+                      prev.map((sec, idx) =>
+                        idx === i
+                          ? { ...sec, requires_meilisearch: e.target.checked }
+                          : sec
+                      )
                     )
                   }
                 />{" "}
@@ -81,12 +94,25 @@ export default function NewTemplate() {
         ))}
         <button
           type="button"
-          onClick={() => setSections([...sections, { title: "", requires_vector_search: false, requires_meilisearch: false }])}
+          onClick={() =>
+            setSections([
+              ...sections,
+              {
+                title: "",
+                description: "",
+                requires_vector_search: false,
+                requires_meilisearch: false,
+              },
+            ])
+          }
           className="text-blue-600"
         >
           + Add Section
         </button>
-        <button type="submit" className="block bg-green-600 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="block bg-green-600 text-white px-4 py-2 rounded"
+        >
           Save Template
         </button>
       </form>

@@ -20,10 +20,11 @@ async function generateSectionDrafts(templateId, inputs) {
 
   for (const section of template.sections) {
     const title = section.title;
+    const description = section.description;
     const userInput = inputs[title] || "";
 
     // Step 1: Embed the section title + user input
-    const queryVector = await embedText(title + " " + userInput);
+    const queryVector = await embedText(title + " " + description);
 
     // Step 2: Search Pinecone
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX_NAME);
@@ -40,17 +41,17 @@ async function generateSectionDrafts(templateId, inputs) {
 
     // Step 3: Compose prompt
     const prompt = `
-You are a legal assistant drafting the "${title}" section of a legal document.
+      You are a legal assistant drafting the "${title}" section of a legal document. This section description is "${description}.
 
-Here are example/reference texts from past documents:
-${references || "None"}
+      Here are example/reference texts from past documents:
+      ${references || "None"}
 
-Now, based on the following user input, write a well-written "${title}" section:
+      Now, based on the following user input, write a well-written "${title}" section:
 
-User Input:
-${userInput}
+      User Input:
+      ${userInput}
 
-Draft:
+      Draft:
     `;
 
     // Step 4: Generate draft via OpenAI

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const sectionSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  description: {type: String, required: false},
   requires_vector_search: { type: Boolean, default: false },
   requires_meilisearch: { type: Boolean, default: false },
 });

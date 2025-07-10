@@ -7,6 +7,8 @@ const { generateSectionDrafts } = require("../services/llm");
 router.post("/", async (req, res) => {
   const { templateId, inputs } = req.body;
 
+  console.log(inputs)
+
   if (!templateId || !inputs) {
     return res.status(400).json({ error: "Template ID and inputs are required." });
   }

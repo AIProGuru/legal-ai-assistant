@@ -57,7 +57,6 @@ export default function CaseDrafting() {
 
     const toggleEditMode = () => {
         if (editMode) {
-            // Attempt to parse the raw JSON back to object
             try {
                 const parsed = JSON.parse(rawDraft);
                 setDraft(parsed);
@@ -66,24 +65,23 @@ export default function CaseDrafting() {
                 alert("⚠️ Invalid JSON. Please fix syntax before saving.");
             }
         } else {
-            // Prepare JSON string from object or string
             const draftStr = typeof draft === "string" ? draft : JSON.stringify(draft, null, 2);
             setRawDraft(draftStr);
             setEditMode(true);
         }
     };
 
-    if (!template) return <div className="p-6">Loading template...</div>;
+    if (!template) return <div className="p-6 text-gray-600">Loading template...</div>;
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
-            <h2 className="text-2xl font-bold">{template.name} – Draft Generator</h2>
+            <h2 className="text-3xl font-bold text-gray-800">{template.name} – Draft Generator</h2>
 
             {/* Sample Files */}
             {template.uploadedFiles?.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded border">
-                    <h3 className="font-semibold mb-2">📎 Sample Documents:</h3>
-                    <ul className="list-disc pl-5 text-blue-600">
+                    <h3 className="font-semibold mb-2 text-gray-700">📎 Sample Documents:</h3>
+                    <ul className="list-disc pl-5 text-blue-600 text-sm">
                         {template.uploadedFiles.map((file, idx) => (
                             <li key={idx}>
                                 <a
@@ -101,17 +99,18 @@ export default function CaseDrafting() {
             )}
 
             {/* Section Inputs */}
-            <div className="space-y-4">
+            <div className="space-y-5">
                 {template.sections.map((section) => (
                     <div key={section.title}>
-                        <label className="block font-medium mb-1">{section.title}</label>
+                        <label className="block text-lg font-medium text-gray-800 mb-1">
+                            {section.title}
+                        </label>
                         <Textarea
-                            rows={4}
+                            rows={5}
+                            className="text-sm"
                             value={inputs[section.title]}
-                            onChange={(e) =>
-                                handleInputChange(section.title, e.target.value)
-                            }
-                            placeholder={`Enter ${section.title.toLowerCase()}...`}
+                            onChange={(e) => handleInputChange(section.title, e.target.value)}
+                            placeholder={section.description || "Enter content..."}
                         />
                     </div>
                 ))}
@@ -126,11 +125,11 @@ export default function CaseDrafting() {
                 Generate Draft
             </Button>
 
-            {/* Generated Draft */}
+            {/* Draft Output */}
             {draft && (
-                <div className="border rounded p-4 space-y-2 bg-gray-50">
+                <div className="border rounded p-4 space-y-3 bg-gray-50 mt-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold">📝 Draft</h3>
+                        <h3 className="text-lg font-semibold text-gray-800">📝 Draft</h3>
                         <Button
                             size="sm"
                             variant="outline"
@@ -144,19 +143,20 @@ export default function CaseDrafting() {
                     {editMode ? (
                         <Textarea
                             rows={15}
+                            className="text-sm font-mono"
                             value={rawDraft}
                             onChange={(e) => setRawDraft(e.target.value)}
                         />
                     ) : (
                         typeof draft === "object" ? (
                             Object.entries(draft).map(([title, content]) => (
-                                <div key={title}>
-                                    <h4 className="font-semibold">{title}</h4>
-                                    <pre className="whitespace-pre-wrap text-sm">{content}</pre>
+                                <div key={title} className="bg-white p-3 rounded border">
+                                    <h4 className="font-semibold text-gray-700 mb-1">{title}</h4>
+                                    <pre className="whitespace-pre-wrap text-sm text-gray-800">{content}</pre>
                                 </div>
                             ))
                         ) : (
-                            <pre className="whitespace-pre-wrap text-sm">{draft}</pre>
+                            <pre className="whitespace-pre-wrap text-sm text-gray-800">{draft}</pre>
                         )
                     )}
                 </div>
