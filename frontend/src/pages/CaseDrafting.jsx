@@ -8,11 +8,22 @@ export default function CaseDrafting() {
     const { templateId } = useParams();
     const [template, setTemplate] = useState(null);
     const [inputs, setInputs] = useState({});
-    const [draft, setDraft] = useState("");
+    const [drafts, setDrafts] = useState([]);
+    const [currentDraft, setCurrentDraft] = useState(null);
     const [rawDraft, setRawDraft] = useState("");
     const [loading, setLoading] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+    const fetchDraftHistory = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/draft/history/${templateId}`);
+            const data = await res.json();
+            setDrafts(data);
+        } catch (err) {
+            console.error("Failed to load draft history", err);
+        }
+    };
 
     useEffect(() => {
         fetch(`${API_BASE}/templates/${templateId}`)
@@ -20,11 +31,11 @@ export default function CaseDrafting() {
             .then((data) => {
                 setTemplate(data);
                 const defaultInputs = {};
-                data.sections.forEach((s) => {
-                    defaultInputs[s.title] = "";
-                });
+                data.sections.forEach((s) => (defaultInputs[s.title] = ""));
                 setInputs(defaultInputs);
             });
+
+        fetchDraftHistory();
     }, [templateId]);
 
     const handleInputChange = (title, value) => {
@@ -33,7 +44,7 @@ export default function CaseDrafting() {
 
     const handleGenerate = async () => {
         setLoading(true);
-        setDraft("");
+        setCurrentDraft(null);
 
         try {
             const res = await fetch(`${API_BASE}/draft`, {
@@ -46,9 +57,10 @@ export default function CaseDrafting() {
             });
 
             const data = await res.json();
-            setDraft(data.draft);
+            setCurrentDraft(data.draft);
+            await fetchDraftHistory();
         } catch (err) {
-            setDraft("⚠️ Error generating draft.");
+            setCurrentDraft("⚠️ Error generating draft.");
             console.error(err);
         } finally {
             setLoading(false);
@@ -59,15 +71,32 @@ export default function CaseDrafting() {
         if (editMode) {
             try {
                 const parsed = JSON.parse(rawDraft);
-                setDraft(parsed);
+                saveEditedDraft(parsed); // save to backend
+                setCurrentDraft(parsed);
                 setEditMode(false);
             } catch (e) {
                 alert("⚠️ Invalid JSON. Please fix syntax before saving.");
             }
         } else {
-            const draftStr = typeof draft === "string" ? draft : JSON.stringify(draft, null, 2);
+            const draftStr = typeof currentDraft === "string" ? currentDraft : JSON.stringify(currentDraft, null, 2);
             setRawDraft(draftStr);
             setEditMode(true);
+        }
+    };
+
+    const saveEditedDraft = async (parsedDraft) => {
+        try {
+            await fetch(`${API_BASE}/draft/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    templateId,
+                    draft: parsedDraft,
+                }),
+            });
+            await fetchDraftHistory(); // refresh history
+        } catch (err) {
+            console.error("Failed to save edited draft", err);
         }
     };
 
@@ -110,31 +139,23 @@ export default function CaseDrafting() {
                             className="text-sm"
                             value={inputs[section.title]}
                             onChange={(e) => handleInputChange(section.title, e.target.value)}
-                            placeholder={section.description || "Enter content..."}
+                            placeholder={"Enter content..."}
                         />
                     </div>
                 ))}
             </div>
 
-            <Button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="mt-4"
-            >
+            <Button onClick={handleGenerate} disabled={loading} className="mt-4">
                 {loading && <Loader2 className="animate-spin mr-2" />}
                 Generate Draft
             </Button>
 
             {/* Draft Output */}
-            {draft && (
+            {currentDraft && (
                 <div className="border rounded p-4 space-y-3 bg-gray-50 mt-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-gray-800">📝 Draft</h3>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={toggleEditMode}
-                        >
+                        <h3 className="text-lg font-semibold text-gray-800">📝 Current Draft</h3>
+                        <Button size="sm" variant="outline" onClick={toggleEditMode}>
                             {editMode ? <Save className="mr-1" /> : <Pencil className="mr-1" />}
                             {editMode ? "Save" : "Edit"}
                         </Button>
@@ -148,17 +169,34 @@ export default function CaseDrafting() {
                             onChange={(e) => setRawDraft(e.target.value)}
                         />
                     ) : (
-                        typeof draft === "object" ? (
-                            Object.entries(draft).map(([title, content]) => (
+                        typeof currentDraft === "object" ? (
+                            Object.entries(currentDraft).map(([title, content]) => (
                                 <div key={title} className="bg-white p-3 rounded border">
                                     <h4 className="font-semibold text-gray-700 mb-1">{title}</h4>
                                     <pre className="whitespace-pre-wrap text-sm text-gray-800">{content}</pre>
                                 </div>
                             ))
                         ) : (
-                            <pre className="whitespace-pre-wrap text-sm text-gray-800">{draft}</pre>
+                            <pre className="whitespace-pre-wrap text-sm text-gray-800">{currentDraft}</pre>
                         )
                     )}
+                </div>
+            )}
+
+            {/* Draft History */}
+            {drafts.length > 0 && (
+                <div className="mt-8 space-y-4">
+                    <h3 className="text-xl font-semibold text-gray-800">📜 Draft History</h3>
+                    {drafts.map((d, idx) => (
+                        <div key={idx} className="bg-white border rounded p-3 shadow-sm">
+                            <div className="text-sm text-gray-500 mb-1">Saved at: {new Date(d.createdAt).toLocaleString()}</div>
+                            <pre className="text-sm whitespace-pre-wrap text-gray-800">
+                                {typeof d.content === "object"
+                                    ? JSON.stringify(d.content, null, 2)
+                                    : d.content}
+                            </pre>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>

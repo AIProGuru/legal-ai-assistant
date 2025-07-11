@@ -17,6 +17,7 @@ async function generateSectionDrafts(templateId, inputs) {
   if (!template) throw new Error("Template not found");
 
   const drafts = {};
+  console.log("from db", template)
 
   for (const section of template.sections) {
     const title = section.title;
@@ -27,33 +28,32 @@ async function generateSectionDrafts(templateId, inputs) {
     const queryVector = await embedText(title + " " + description);
 
     // Step 2: Search Pinecone
-    const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX_NAME);
-    const searchResult = await pineconeIndex.query({
-      vector: queryVector,
-      topK: 5,
-      includeMetadata: true,
-      filter: { templateName: template.name },
-    });
+    // const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX_NAME);
+    // const searchResult = await pineconeIndex.query({
+    //   vector: queryVector,
+    //   topK: 5,
+    //   includeMetadata: true,
+    //   filter: { templateName: template.name },
+    // });
 
-    const references = searchResult.matches
-      .map((match) => match.metadata?.text || "")
-      .join("\n\n");
+    // const references = searchResult.matches
+    //   .map((match) => match.metadata?.text || "")
+    //   .join("\n\n");
 
     // Step 3: Compose prompt
     const prompt = `
-      You are a legal assistant drafting the "${title}" section of a legal document. This section description is "${description}.
+      You are a legal drafting assistant. Your task is to write the "${title}" section of a "${template.name}" legal document.
 
-      Here are example/reference texts from past documents:
-      ${references || "None"}
+      Below is a general example or description of what this section typically includes:
+      ${description}
 
-      Now, based on the following user input, write a well-written "${title}" section:
-
-      User Input:
+      Now, based on the user's specific case details provided below, draft a clear, legally sound version of this section:
       ${userInput}
+
+      Make it as detail as you can.
 
       Draft:
     `;
-
     // Step 4: Generate draft via OpenAI
     const generatedText = await generateChat([{ role: "user", content: prompt }]);
     drafts[title] = generatedText;
