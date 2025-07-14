@@ -10,14 +10,28 @@ export default function CaseDrafting() {
     const [inputs, setInputs] = useState({});
     const [drafts, setDrafts] = useState([]);
     const [currentDraft, setCurrentDraft] = useState(null);
+    const [currentDraftId, setCurrentDraftId] = useState(null);
     const [rawDraft, setRawDraft] = useState("");
     const [loading, setLoading] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+    const authHeaders = () => {
+        const token = localStorage.getItem("token");
+        return {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+        };
+    };
+
     const fetchDraftHistory = async () => {
         try {
-            const res = await fetch(`${API_BASE}/draft/history/${templateId}`);
+            const res = await fetch(`${API_BASE}/draft/history/${templateId}`, {
+                headers: authHeaders(),
+            });
+
+            if (!res.ok) throw new Error("Not authorized");
+
             const data = await res.json();
             setDrafts(data);
         } catch (err) {
@@ -45,19 +59,23 @@ export default function CaseDrafting() {
     const handleGenerate = async () => {
         setLoading(true);
         setCurrentDraft(null);
+        setCurrentDraftId(null);
 
         try {
             const res = await fetch(`${API_BASE}/draft`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: authHeaders(),
                 body: JSON.stringify({
                     templateId,
                     inputs,
                 }),
             });
 
+            if (!res.ok) throw new Error("Generation failed");
+
             const data = await res.json();
             setCurrentDraft(data.draft);
+            setCurrentDraftId(data.draftId);
             await fetchDraftHistory();
         } catch (err) {
             setCurrentDraft("⚠️ Error generating draft.");
@@ -71,32 +89,40 @@ export default function CaseDrafting() {
         if (editMode) {
             try {
                 const parsed = JSON.parse(rawDraft);
-                saveEditedDraft(parsed); // save to backend
+                updateEditedDraft(parsed);
                 setCurrentDraft(parsed);
                 setEditMode(false);
             } catch (e) {
                 alert("⚠️ Invalid JSON. Please fix syntax before saving.");
             }
         } else {
-            const draftStr = typeof currentDraft === "string" ? currentDraft : JSON.stringify(currentDraft, null, 2);
+            const draftStr =
+                typeof currentDraft === "string"
+                    ? currentDraft
+                    : JSON.stringify(currentDraft, null, 2);
             setRawDraft(draftStr);
             setEditMode(true);
         }
     };
 
-    const saveEditedDraft = async (parsedDraft) => {
+    const updateEditedDraft = async (parsedDraft) => {
+        if (!currentDraftId) {
+            console.warn("No currentDraftId to update");
+            return;
+        }
+
         try {
-            await fetch(`${API_BASE}/draft/save`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    templateId,
-                    draft: parsedDraft,
-                }),
+            const res = await fetch(`${API_BASE}/draft/${currentDraftId}`, {
+                method: "PUT",
+                headers: authHeaders(),
+                body: JSON.stringify({ draft: parsedDraft }),
             });
-            await fetchDraftHistory(); // refresh history
+
+            if (!res.ok) throw new Error("Update failed");
+
+            await fetchDraftHistory();
         } catch (err) {
-            console.error("Failed to save edited draft", err);
+            console.error("Failed to update edited draft", err);
         }
     };
 
@@ -104,7 +130,9 @@ export default function CaseDrafting() {
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
-            <h2 className="text-3xl font-bold text-gray-800">{template.name} – Draft Generator</h2>
+            <h2 className="text-3xl font-bold text-gray-800">
+                {template.name} – Draft Generator
+            </h2>
 
             {/* Sample Files */}
             {template.uploadedFiles?.length > 0 && (
@@ -139,7 +167,7 @@ export default function CaseDrafting() {
                             className="text-sm"
                             value={inputs[section.title]}
                             onChange={(e) => handleInputChange(section.title, e.target.value)}
-                            placeholder={"Enter content..."}
+                            placeholder="Enter content..."
                         />
                     </div>
                 ))}
@@ -150,7 +178,7 @@ export default function CaseDrafting() {
                 Generate Draft
             </Button>
 
-            {/* Draft Output */}
+            {/* Current Draft Output */}
             {currentDraft && (
                 <div className="border rounded p-4 space-y-3 bg-gray-50 mt-6">
                     <div className="flex justify-between items-center">
@@ -168,17 +196,19 @@ export default function CaseDrafting() {
                             value={rawDraft}
                             onChange={(e) => setRawDraft(e.target.value)}
                         />
+                    ) : typeof currentDraft === "object" ? (
+                        Object.entries(currentDraft).map(([title, content]) => (
+                            <div key={title} className="bg-white p-3 rounded border">
+                                <h4 className="font-semibold text-gray-700 mb-1">{title}</h4>
+                                <pre className="whitespace-pre-wrap text-sm text-gray-800">
+                                    {content}
+                                </pre>
+                            </div>
+                        ))
                     ) : (
-                        typeof currentDraft === "object" ? (
-                            Object.entries(currentDraft).map(([title, content]) => (
-                                <div key={title} className="bg-white p-3 rounded border">
-                                    <h4 className="font-semibold text-gray-700 mb-1">{title}</h4>
-                                    <pre className="whitespace-pre-wrap text-sm text-gray-800">{content}</pre>
-                                </div>
-                            ))
-                        ) : (
-                            <pre className="whitespace-pre-wrap text-sm text-gray-800">{currentDraft}</pre>
-                        )
+                        <pre className="whitespace-pre-wrap text-sm text-gray-800">
+                            {currentDraft}
+                        </pre>
                     )}
                 </div>
             )}
@@ -189,7 +219,9 @@ export default function CaseDrafting() {
                     <h3 className="text-xl font-semibold text-gray-800">📜 Draft History</h3>
                     {drafts.map((d, idx) => (
                         <div key={idx} className="bg-white border rounded p-3 shadow-sm">
-                            <div className="text-sm text-gray-500 mb-1">Saved at: {new Date(d.createdAt).toLocaleString()}</div>
+                            <div className="text-sm text-gray-500 mb-1">
+                                Saved at: {new Date(d.createdAt).toLocaleString()}
+                            </div>
                             <pre className="text-sm whitespace-pre-wrap text-gray-800">
                                 {typeof d.content === "object"
                                     ? JSON.stringify(d.content, null, 2)

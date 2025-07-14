@@ -6,6 +6,7 @@ const draftSchema = new mongoose.Schema({
     required: true,
     ref: "Template"
   },
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
   content: {
     type: Object, // Assuming draft is a structured JSON
     required: true
