@@ -64,11 +64,21 @@ router.get("/:id/files", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const { name, description, sections } = req.body;
+
+    const processedSections = (sections || []).map((sec) => ({
+      title: sec.title,
+      description: sec.description || "",
+      sample_draft: sec.sample_draft || "",
+      requires_vector_search: !!sec.requires_vector_search,
+      requires_meilisearch: !!sec.requires_meilisearch,
+    }));
+
     const updated = await Template.findByIdAndUpdate(
       req.params.id,
-      { name, description, sections },
+      { name, description, sections: processedSections },
       { new: true, runValidators: true }
     );
+
     if (!updated) return res.status(404).json({ error: "Template not found" });
     res.json(updated);
   } catch (err) {
@@ -76,6 +86,9 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update template" });
   }
 });
+
+
+
 
 
 module.exports = router

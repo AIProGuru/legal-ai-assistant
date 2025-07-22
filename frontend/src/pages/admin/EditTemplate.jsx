@@ -148,6 +148,17 @@ export default function EditTemplate() {
               />
             </div>
 
+            <div>
+              <label className="block font-medium mb-1">Sample Draft</label>
+              <Textarea
+                rows={4}
+                value={section.sample_draft}
+                onChange={(e) =>
+                  updateSectionField(index, "sample_draft", e.target.value)
+                }
+              />
+            </div>
+
             <div className="flex gap-4 items-center">
 
 

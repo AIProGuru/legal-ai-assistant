@@ -64,12 +64,20 @@ export default function Templates() {
 
             <div className="mt-4 space-y-3">
               {t.sections.map((s, i) => (
-                <div key={i} className="border border-gray-200 rounded p-3 bg-gray-50">
+                <div key={i} className="border border-gray-200 rounded p-3 bg-gray-50 space-y-2">
                   <h3 className="font-medium">{s.title}</h3>
                   {s.description && (
                     <p className="text-sm text-gray-600">{s.description}</p>
                   )}
-                  <div className="mt-2 flex gap-2 flex-wrap">
+
+                  {s.sample_draft && (
+                    <div className="bg-white border rounded p-2 text-sm text-gray-800">
+                      <p className="text-xs font-semibold text-gray-500 mb-1">Sample Draft:</p>
+                      <pre className="whitespace-pre-wrap break-words">{s.sample_draft}</pre>
+                    </div>
+                  )}
+
+                  <div className="mt-1 flex gap-2 flex-wrap">
                     {s.requires_vector_search && (
                       <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                         Vector Search

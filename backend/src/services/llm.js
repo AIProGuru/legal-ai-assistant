@@ -12,55 +12,108 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
 
+
+async function searchMeili(query, country) {
+  const indexUrlMap = {
+    "El Salvador": "https://api.docs.bufetemejia.com/indexes/El-Salvador-test/search",
+    "Costa Rica": "https://api.docs.bufetemejia.com/indexes/COSTA-RICA/search",
+    "Honduras": "https://api.docs.bufetemejia.com/indexes/HONDURAS/search",
+  };
+
+  const indexUrl = indexUrlMap[country];
+
+  if (!indexUrl) {
+    throw new Error(`No index URL configured for country: ${country}`);
+  }
+
+  const response = await axios.post(
+    indexUrl,
+    {
+      q: query,
+      limit: 5,
+      hybrid: {
+        semanticRatio: 1,
+        embedder: "default",
+      },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${MEILISEARCH_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return response.data;
+}
+
 async function generateSectionDrafts(templateId, inputs) {
   const template = await Template.findById(templateId);
   if (!template) throw new Error("Template not found");
 
   const drafts = {};
-  console.log("from db", template)
 
   for (const section of template.sections) {
     const title = section.title;
     const description = section.description;
+    const sampleDraft = section.sample_draft;
     const userInput = inputs[title] || "";
+    const requireMeilisearch = section.requires_meilisearch;
 
-    // Step 1: Embed the section title + user input
     const queryVector = await embedText(title + " " + description);
 
-    // Step 2: Search Pinecone
-    // const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX_NAME);
-    // const searchResult = await pineconeIndex.query({
-    //   vector: queryVector,
-    //   topK: 5,
-    //   includeMetadata: true,
-    //   filter: { templateName: template.name },
-    // });
+    // Default to Honduras unless otherwise inferred from template/inputs
+    const country = template.country || "Honduras";
 
-    // const references = searchResult.matches
-    //   .map((match) => match.metadata?.text || "")
-    //   .join("\n\n");
+    let meiliReferences = "";
 
-    // Step 3: Compose prompt
+    if (requireMeilisearch && userInput?.trim()) {
+      try {
+        const meiliResult = await searchMeili(userInput, country);
+
+        if (meiliResult?.hits?.length > 0) {
+          meiliReferences = meiliResult.hits
+            .map(
+              (hit, index) =>
+                `${index + 1}. law_title: ${hit.law_title ?? null}, type: ${hit.type ?? null}, title_number: ${hit.title?.number ?? null}, title_text: ${hit.title?.text ?? null} chapter_number: ${hit.chapter?.number ?? null}, chapter_title: ${hit.chapter?.title ?? null}, section_number: ${hit.section?.number ?? null}, section_title: ${hit.section?.title ?? null}, artitle_number: ${hit.article?.number ?? null}, article_title: ${hit.article?.title ?? null} content: ${hit.text ?? null}`
+            )
+            .join("\n\n");
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch from MeiliSearch: ${err.message}`);
+      }
+    }
+
     const prompt = `
       You are a legal drafting assistant. Your task is to write the "${title}" section of a "${template.name}" legal document.
 
       Below is a general example or description of what this section typically includes:
-      ${description}
+      ${description || "[No description provided]"}
 
-      Now, based on the user's specific case details provided below, draft a clear, legally sound version of this section:
+      Below is a sample draft, which shows the general style and tone to follow (not the actual content):
+      ${sampleDraft || "[No sample draft provided]"}
+
+      Relevant legal references based on the user's input:
+      ${meiliReferences || "[No related legal references found.]"}
+
+      Now, based on the user's case-specific details below, generate a clear, detailed, and legally sound version of this section:
       ${userInput}
 
-      Make it as detail as you can.
+      ⚠️ If the user's input appears to be placeholder or meaningless (e.g., repeated words like "test test test", gibberish, or empty content), respond with:
+      "⚠️ Unable to generate meaningful content due to insufficient or unclear case details."
+
+      Ensure your response uses the same language as the user's input. Only respond with the generated draft for this section — not the full document.
 
       Draft:
     `;
-    // Step 4: Generate draft via OpenAI
+
     const generatedText = await generateChat([{ role: "user", content: prompt }]);
     drafts[title] = generatedText;
   }
 
   return drafts;
 }
+
 
 async function embedText(input) {
   try {

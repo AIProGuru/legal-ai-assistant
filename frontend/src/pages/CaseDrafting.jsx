@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, Save } from "lucide-react";
+import { Loader2, Pencil, Save, X } from "lucide-react";
 
 export default function CaseDrafting() {
     const { templateId } = useParams();
@@ -11,9 +11,10 @@ export default function CaseDrafting() {
     const [drafts, setDrafts] = useState([]);
     const [currentDraft, setCurrentDraft] = useState(null);
     const [currentDraftId, setCurrentDraftId] = useState(null);
-    const [rawDraft, setRawDraft] = useState("");
     const [loading, setLoading] = useState(false);
     const [editMode, setEditMode] = useState(false);
+    const [editedDraft, setEditedDraft] = useState({});
+    const [expandedHistory, setExpandedHistory] = useState(null);
     const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
     const authHeaders = () => {
@@ -31,7 +32,6 @@ export default function CaseDrafting() {
             });
 
             if (!res.ok) throw new Error("Not authorized");
-
             const data = await res.json();
             setDrafts(data);
         } catch (err) {
@@ -87,20 +87,11 @@ export default function CaseDrafting() {
 
     const toggleEditMode = () => {
         if (editMode) {
-            try {
-                const parsed = JSON.parse(rawDraft);
-                updateEditedDraft(parsed);
-                setCurrentDraft(parsed);
-                setEditMode(false);
-            } catch (e) {
-                alert("⚠️ Invalid JSON. Please fix syntax before saving.");
-            }
+            updateEditedDraft(editedDraft);
+            setCurrentDraft(editedDraft);
+            setEditMode(false);
         } else {
-            const draftStr =
-                typeof currentDraft === "string"
-                    ? currentDraft
-                    : JSON.stringify(currentDraft, null, 2);
-            setRawDraft(draftStr);
+            setEditedDraft({ ...currentDraft });
             setEditMode(true);
         }
     };
@@ -134,7 +125,7 @@ export default function CaseDrafting() {
                 {template.name} – Draft Generator
             </h2>
 
-            {/* Sample Files */}
+            {/* Uploaded Files */}
             {template.uploadedFiles?.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded border">
                     <h3 className="font-semibold mb-2 text-gray-700">📎 Sample Documents:</h3>
@@ -167,7 +158,7 @@ export default function CaseDrafting() {
                             className="text-sm"
                             value={inputs[section.title]}
                             onChange={(e) => handleInputChange(section.title, e.target.value)}
-                            placeholder="Enter content..."
+                            placeholder={section.description || "Enter content..."}
                         />
                     </div>
                 ))}
@@ -178,38 +169,54 @@ export default function CaseDrafting() {
                 Generate Draft
             </Button>
 
-            {/* Current Draft Output */}
+            {/* Current Draft */}
             {currentDraft && (
-                <div className="border rounded p-4 space-y-3 bg-gray-50 mt-6">
+                <div className="border rounded p-4 space-y-4 bg-gray-50 mt-6">
                     <div className="flex justify-between items-center">
                         <h3 className="text-lg font-semibold text-gray-800">📝 Current Draft</h3>
-                        <Button size="sm" variant="outline" onClick={toggleEditMode}>
-                            {editMode ? <Save className="mr-1" /> : <Pencil className="mr-1" />}
-                            {editMode ? "Save" : "Edit"}
-                        </Button>
+                        <div className="flex gap-2">
+                            {editMode ? (
+                                <>
+                                    <Button size="sm" onClick={toggleEditMode}>
+                                        <Save className="mr-1" />
+                                        Save
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => setEditMode(false)}>
+                                        <X className="mr-1" />
+                                        Cancel
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button size="sm" variant="outline" onClick={toggleEditMode}>
+                                    <Pencil className="mr-1" />
+                                    Edit
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
-                    {editMode ? (
-                        <Textarea
-                            rows={15}
-                            className="text-sm font-mono"
-                            value={rawDraft}
-                            onChange={(e) => setRawDraft(e.target.value)}
-                        />
-                    ) : typeof currentDraft === "object" ? (
-                        Object.entries(currentDraft).map(([title, content]) => (
-                            <div key={title} className="bg-white p-3 rounded border">
-                                <h4 className="font-semibold text-gray-700 mb-1">{title}</h4>
+                    {template.sections.map((section) => (
+                        <div key={section.title} className="bg-white p-3 rounded border">
+                            <h4 className="font-semibold text-gray-700 mb-1">{section.title}</h4>
+                            {editMode ? (
+                                <Textarea
+                                    rows={4}
+                                    className="text-sm"
+                                    value={editedDraft[section.title] || ""}
+                                    onChange={(e) =>
+                                        setEditedDraft((prev) => ({
+                                            ...prev,
+                                            [section.title]: e.target.value,
+                                        }))
+                                    }
+                                />
+                            ) : (
                                 <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                                    {content}
+                                    {currentDraft[section.title]}
                                 </pre>
-                            </div>
-                        ))
-                    ) : (
-                        <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                            {currentDraft}
-                        </pre>
-                    )}
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -217,18 +224,31 @@ export default function CaseDrafting() {
             {drafts.length > 0 && (
                 <div className="mt-8 space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800">📜 Draft History</h3>
-                    {drafts.map((d, idx) => (
-                        <div key={idx} className="bg-white border rounded p-3 shadow-sm">
-                            <div className="text-sm text-gray-500 mb-1">
-                                Saved at: {new Date(d.createdAt).toLocaleString()}
+                    {drafts.map((d, idx) => {
+                        const isExpanded = expandedHistory === idx;
+                        const content = typeof d.content === "object" ? d.content : {};
+                        return (
+                            <div
+                                key={idx}
+                                className="bg-white border rounded p-3 shadow-sm cursor-pointer"
+                                onClick={() => setExpandedHistory(isExpanded ? null : idx)}
+                            >
+                                <div className="text-sm text-blue-700 font-medium">
+                                    {new Date(d.createdAt).toLocaleString()}
+                                </div>
+                                {isExpanded && (
+                                    <div className="mt-2 space-y-3">
+                                        {Object.entries(content).map(([title, val]) => (
+                                            <div key={title}>
+                                                <div className="font-semibold text-gray-700">{title}</div>
+                                                <pre className="text-sm text-gray-800 whitespace-pre-wrap">{val}</pre>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <pre className="text-sm whitespace-pre-wrap text-gray-800">
-                                {typeof d.content === "object"
-                                    ? JSON.stringify(d.content, null, 2)
-                                    : d.content}
-                            </pre>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

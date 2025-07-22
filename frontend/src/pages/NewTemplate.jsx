@@ -9,6 +9,7 @@ export default function NewTemplate() {
     {
       title: "",
       description: "",
+      sample_draft: "",
       requires_vector_search: false,
       requires_meilisearch: false,
     },
@@ -47,7 +48,7 @@ export default function NewTemplate() {
         />
         <h2 className="text-lg font-semibold">Sections</h2>
         {sections.map((s, i) => (
-          <div key={i} className="border p-3 rounded space-y-2 mb-2">
+          <div key={i} className="border p-3 rounded space-y-2 mb-2 bg-gray-50">
             <input
               className="w-full border px-2 py-1 rounded"
               placeholder="Section Title"
@@ -72,8 +73,20 @@ export default function NewTemplate() {
                 )
               }
             />
+            <textarea
+              className="w-full border px-2 py-1 rounded"
+              placeholder="Sample Draft (optional)"
+              value={s.sample_draft}
+              onChange={(e) =>
+                setSections((prev) =>
+                  prev.map((sec, idx) =>
+                    idx === i ? { ...sec, sample_draft: e.target.value } : sec
+                  )
+                )
+              }
+            />
             <div className="flex space-x-4 items-center">
-              <label>
+              <label className="text-sm">
                 <input
                   type="checkbox"
                   checked={s.requires_meilisearch}
@@ -100,6 +113,7 @@ export default function NewTemplate() {
               {
                 title: "",
                 description: "",
+                sample_draft: "",
                 requires_vector_search: false,
                 requires_meilisearch: false,
               },
