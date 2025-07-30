@@ -32,6 +32,12 @@ async function searchMeili(query, country) {
   const indexUrlMap = {
     "El Salvador": "https://api.docs.bufetemejia.com/indexes/El-Salvador-test/search",
     "Costa Rica": "https://api.docs.bufetemejia.com/indexes/COSTA-RICA/search",
+    "Honduras": "https://api.docs.bufetemejia.com/indexes/HONDURAS/search",
+    "Nicaragua": "https://api.docs.bufetemejia.com/indexes/Nicaragua/search",
+    "Panama": "https://api.docs.bufetemejia.com/indexes/Panama/search",
+    "Paraguay": "https://api.docs.bufetemejia.com/indexes/Paraguay/search",
+    "Dominica": "https://api.docs.bufetemejia.com/indexes/Republica-Dominicana/search",
+    
   };
 
   const indexUrl = indexUrlMap[country];
@@ -132,7 +138,7 @@ app.post("/admin/create-assistant", async (req, res) => {
 //  /api/chat
 // ---------------------------
 app.post("/api/chat", async (req, res) => {
-  const { query, threadID, userID, country } = req.body;
+  const { query, threadID, userID } = req.body;
   let currentThreadID = threadID;
 
   try {

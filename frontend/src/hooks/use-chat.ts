@@ -119,7 +119,7 @@ export function useChat(initialThreadId?: string) {
           userID: userID,
           threadID: currentThreadId,
           query: content,
-          country: detectedCountry || currentCountry, // <-- send currentCountry to backend
+          // country: detectedCountry || currentCountry, // <-- send currentCountry to backend
         }),
       });
 
