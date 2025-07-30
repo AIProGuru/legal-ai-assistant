@@ -28,8 +28,9 @@ const ASSISTANT_ID = process.env.ASSISTANT_ID;
 // -----------------------
 // Utility: MeiliSearch
 // -----------------------
-async function searchMeili(query, country) {
-  const indexUrlMap = {
+
+
+const indexUrlMap = {
     "El Salvador": "https://api.docs.bufetemejia.com/indexes/El-Salvador-test/search",
     "Costa Rica": "https://api.docs.bufetemejia.com/indexes/COSTA-RICA/search",
     "Honduras": "https://api.docs.bufetemejia.com/indexes/HONDURAS/search",
@@ -40,35 +41,57 @@ async function searchMeili(query, country) {
     
   };
 
+
+async function searchMeili(query, country) {
+  const indexUrlMap = {
+    "El Salvador": "https://api.docs.bufetemejia.com/indexes/El-Salvador-test/search",
+    "Costa Rica": "https://api.docs.bufetemejia.com/indexes/COSTA-RICA/search",
+    "Honduras": "https://api.docs.bufetemejia.com/indexes/HONDURAS/search",
+    "Nicaragua": "https://api.docs.bufetemejia.com/indexes/Nicaragua/search",
+    "Panama": "https://api.docs.bufetemejia.com/indexes/Panama/search",
+    "Paraguay": "https://api.docs.bufetemejia.com/indexes/Paraguay/search",
+    "Dominica": "https://api.docs.bufetemejia.com/indexes/Republica-Dominicana/search",
+  };
+
   const indexUrl = indexUrlMap[country];
-  if (!indexUrl) throw new Error(`No index for country: ${country}`);
+  if (!indexUrl) {
+    console.warn(`No legal index found for country: ${country}`);
+    return `⚠️ No legal search index is available for "${country}". Please provide a supported country (e.g., El Salvador, Costa Rica, Honduras, Nicaragua, Panama, Paraguay, and Dominica).`;
+  }
 
-  const response = await axios.post(
-    indexUrl,
-    {
-      q: query,
-      limit: 5,
-      hybrid: {
-        semanticRatio: 1,
-        embedder: "default",
+  try {
+    const response = await axios.post(
+      indexUrl,
+      {
+        q: query,
+        limit: 5,
+        hybrid: {
+          semanticRatio: 1,
+          embedder: "default",
+        },
       },
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${MEILISEARCH_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+      {
+        headers: {
+          Authorization: `Bearer ${MEILISEARCH_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-  const hits = response.data.hits;
-  const formatted = hits
-    .map((hit, index) =>
-      `${index + 1}. law_title: ${hit.law_title ?? "N/A"}, type: ${hit.type ?? "N/A"}, title_number: ${hit.title?.number ?? "N/A"}, title_text: ${hit.title?.text ?? "N/A"}, chapter_number: ${hit.chapter?.number ?? "N/A"}, chapter_title: ${hit.chapter?.title ?? "N/A"}, section_number: ${hit.section?.number ?? "N/A"}, section_title: ${hit.section?.title ?? "N/A"}, article_number: ${hit.article?.number ?? "N/A"}, article_title: ${hit.article?.title ?? "N/A"}, content: ${hit.text ?? "N/A"}`
-    )
-    .join("\n\n");
+    const hits = response.data.hits;
+    if (!hits || hits.length === 0) return "⚠️ No relevant legal content found.";
 
-  return formatted;
+    const formatted = hits
+      .map((hit, index) =>
+        `${index + 1}. law_title: ${hit.law_title ?? "N/A"}, type: ${hit.type ?? "N/A"}, title_number: ${hit.title?.number ?? "N/A"}, title_text: ${hit.title?.text ?? "N/A"}, chapter_number: ${hit.chapter?.number ?? "N/A"}, chapter_title: ${hit.chapter?.title ?? "N/A"}, section_number: ${hit.section?.number ?? "N/A"}, section_title: ${hit.section?.title ?? "N/A"}, article_number: ${hit.article?.number ?? "N/A"}, article_title: ${hit.article?.title ?? "N/A"}, content: ${hit.text ?? "N/A"}`
+      )
+      .join("\n\n");
+
+    return formatted;
+  } catch (error) {
+    console.error("MeiliSearch error:", error.message);
+    return "⚠️ Error occurred during legal search. Please try again later.";
+  }
 }
 
 // ---------------------------
