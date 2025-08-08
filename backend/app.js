@@ -1,5 +1,6 @@
 // server.js
 const express = require("express");
+const morgan = require("morgan");
 const axios = require("axios");
 const cors = require("cors");
 require("dotenv").config();
@@ -9,6 +10,8 @@ const OpenAI = require("openai");
 const supabase = require("./src/integration/supabase/client");
 
 const app = express();
+app.use(morgan("dev"));
+
 const port = 3000;
 
 app.use(express.json());
@@ -56,7 +59,9 @@ async function searchWeb({ query, location = "" }) {
       rank: index + 1,
     }));
 
-    return formattedResults;
+    return formattedResults
+      .map(r => `(${r.rank}) ${r.title}\n${r.snippet}\n${r.url}`)
+      .join("\n\n");
   } catch (error) {
     console.error("searchWeb error:", error.message);
     return `Error al buscar en la web: ${error.message}`;
@@ -388,12 +393,8 @@ app.post("/api/chat", async (req, res) => {
               break;
 
             case "searchWeb":
-              const args = JSON.parse(toolCall.function.arguments);
-              const result = await searchWeb(args);
-              return {
-                tool_call_id: toolCall.id,
-                output: result,
-              };
+              result = await searchWeb(args); // no redeclaration
+              break;
 
             default:
               console.warn(`Unknown function: ${functionName}`);
@@ -461,6 +462,19 @@ app.post("/api/get-thread-history", async (req, res) => {
     console.error("Thread history error:", error.response?.data || error.message);
     res.status(500).send("Failed to get thread history");
   }
+});
+
+
+
+app.post("/api/searchWeb", async (req, res) => {
+  const { query, location } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: "Query is required" });
+  }
+
+  const result = await searchWeb({ query, location });
+  res.send(result);
 });
 
 // ---------------------------
