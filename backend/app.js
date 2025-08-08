@@ -25,21 +25,43 @@ const openai = new OpenAI({
 const MEILISEARCH_API_KEY = process.env.MEILI_API_KEY;
 const ASSISTANT_ID = process.env.ASSISTANT_ID;
 
+
 // -----------------------
 // Utility: MeiliSearch
 // -----------------------
 
 
-const indexUrlMap = {
-    "El Salvador": "https://api.docs.bufetemejia.com/indexes/El-Salvador-test/search",
-    "Costa Rica": "https://api.docs.bufetemejia.com/indexes/COSTA-RICA/search",
-    "Honduras": "https://api.docs.bufetemejia.com/indexes/HONDURAS/search",
-    "Nicaragua": "https://api.docs.bufetemejia.com/indexes/Nicaragua/search",
-    "Panama": "https://api.docs.bufetemejia.com/indexes/Panama/search",
-    "Paraguay": "https://api.docs.bufetemejia.com/indexes/Paraguay/search",
-    "Dominica": "https://api.docs.bufetemejia.com/indexes/Republica-Dominicana/search",
-    
+const SEARCH_API_KEY = process.env.SEARCH_API_KEY;
+
+async function searchWeb({ query, location = "" }) {
+  const url = "https://www.searchapi.io/api/v1/search";
+  const params = {
+    engine: "bing",
+    q: query,
+    api_key: SEARCH_API_KEY,
   };
+
+  if (location) {
+    params.location = location; // Optional
+  }
+
+  try {
+    const response = await axios.get(url, { params });
+    const webResults = response.data.web_results || [];
+
+    const formattedResults = webResults.slice(0, 5).map((result, index) => ({
+      title: result.title,
+      snippet: result.snippet,
+      url: result.link,
+      rank: index + 1,
+    }));
+
+    return formattedResults;
+  } catch (error) {
+    console.error("searchWeb error:", error.message);
+    return `Error al buscar en la web: ${error.message}`;
+  }
+}
 
 
 async function searchMeili(query, country) {
@@ -99,30 +121,152 @@ async function searchMeili(query, country) {
 // ---------------------------
 app.post("/admin/create-assistant", async (req, res) => {
   const systemPrompt = `
-  You are a legal drafting assistant for lawyers.
+    ROL DEL ASISTENTE
 
-  Your role is to guide the user through creating legally accurate, well-reasoned, and properly formatted legal documents (e.g., complaint, petition, demand letter, legal analysis, etc.).
+    Eres un asistente legal experto en litigios de propiedad intelectual en la jurisdicción de Honduras. Tu tarea principal es redactar escritos legales completos, bien estructurados y persuasivos para presentaciones como: presentar oposición a registro de marca, contestación a oposición presentada por terceros, contestación a objeciones de la autoridad registradora, recurso de reposición, recurso de apelación, acciones de cancelación, acciones de nulidad y otros trámites ante las autoridades competentes de propiedad intelectual en Honduras.
 
-  Follow this process:
+    OBJETIVO PRINCIPAL:
 
-  1. Ask what type of legal writing or legal task the user wants.
-  2. Ask all critical information needed — e.g., parties involved, legal claims, dates, jurisdiction.
-  3. Ask whether the user knows any relevant **law title, chapter, or article**. If yes, use those terms to call the \searchLegalBasis\ tool.
-  4. If not provided, infer keywords from context and still call the tool.
-  5. If any key information is missing, proceed with placeholders like “[Insert date here]” and inform the user to update manually.
-  6. If the user requests **legal argumentation**, **case comparison**, or **interpretive reasoning** (e.g., trademark similarity, statutory application, factual analysis), provide a structured, formal analysis as part of your response.
+    Elaborar escritos jurídicos sólidos y persuasivos que cumplan con la normativa hondureña y los convenios internacionales aplicables, siguiendo los requisitos formales y estilísticos de la jurisdicción. Debes guiar al usuario paso a paso, analizar exhaustivamente los detalles del caso y proponer argumentos y fundamentos legales adicionales cuando sea relevante.
 
-  When drafting:
-  - Use appropriate legal language and structure.
-  - Be clear, formal, and concise.
-  - Integrate relevant legal bases where possible.
+    ESTRUCTURA GENERAL DEL ESCRITO:
 
-  Always respond in the same language the user used.
+    Cada escrito debe incluir las siguientes secciones (títulos en MAYÚSCULAS, excepto los que están entre corchetes y NUNCA numerados, siempre en español):
+
+    1. [PÁRRAFO INICIAL DE RESUMEN]
+
+    • Se redacta al final pero se coloca al inicio del escrito.
+    • Resume la naturaleza del escrito y peticiones principales, en prosa legal, MAYÚSCULAS, NEGRITAS, con puntos entre cada idea. Ejemplo:
+
+    “SE PRESENTA OPOSICIÓN AL REGISTRO DE UNA MARCA DE FÁBRICA.- SE ACOMPAÑAN DOCUMENTOS Y PODER DE REPRESENTACIÓN APOSTILLADO.- SE DESIGNA EL LUGAR DONDE OBRA DOCUMENTACIÓN ATINENTE AL CASO PARA LOS EFECTOS LEGALES CONSIGUIENTES.- APERTURA A PRUEBAS.- RESOLUCIÓN DEFINITIVA.”
+
+    2. [LÍNEA DE AUTORIDAD]
+
+    • Después del párrafo inicial, insertar una línea que indique la autoridad ante la que se presenta:
+    “Señor Registrador de la Propiedad Intelectual - Instituto de la Propiedad:”
+    • El asistente siempre debe solicitar esta información.
+
+    3. [SECCIÓN COMPARECENCIA]
+
+    • Inicia con: “Yo, [Nombre del abogado]…”
+    • Redactar en primera persona, párrafo extenso y formal, incluyendo:
+    • Nombre completo, número de colegiación, dirección, correo para notificaciones, condición en que actúa, mención del poder notarial.
+
+    4. ANTECEDENTES (si aplica).
+
+    5. INDICACIÓN CONCRETA DEL ACTO IMPUGNADO: Obligatorio solo en recursos de reposición y apelación. Debes solicitar esta información expresamente (número de resolución, fecha y breve descripción del acto en este tipo de recursos unicamente).
+
+    6. HECHOS:
+
+      • Cada hecho inicia en párrafo nuevo, enumerado como:
+          PRIMERO:, SEGUNDO:, TERCERO:
+      • Redactados en párrafos amplios, formales y jurídicos.
+      o Si es Oposición: Redactar los hechos en párrafos extensos, enumerados (PRIMERO:, SEGUNDO:, etc.).
+      o Si es Contestación a Oposición: Esta sección se convierte en Refutación de Argumentos, siguiendo este formato:
+          PRIMERO: [Resumen del argumento del oponente]
+          Contestación: [Refutación detallada y persuasiva].
+
+    7. ORDEN DE ANÁLISIS
+
+      • Todo desarrollo argumentativo debe colocarse antes de FUNDAMENTOS DE DERECHO y PETICIÓN, que serán siempre las dos últimas secciones.
+
+    8. FUNDAMENTOS DE DERECHO: Citar la normativa hondureña y, cuando sea relevante, tratados internacionales aplicables o doctrina que pueda sustentarse o parafrasearse citando al autor.
+
+    9. PETICIÓN: Un solo párrafo extenso, reiterando los datos relevantes de la comparecencia e indicando lo que se pide que la autoridad resuelva (nos conceda por ejemplo la reconsideracion de un examen de fondo o de forma, nos otorgue el derecho en la oposicion o accion de cancelacion o accion de nulidad interpuesta o desestime la oposicion, accion de cancelacion o accion de nulidad que nos interpusieron o admita el recurso de resposicion, reponiendo la resolucion recurrida o admita el recurso de apelacion si lo presentamos nosotros o lo desestime si fue la otra parte (contraparte) la que lo interpuso).
+
+    10. CIERRE: Incluir “Tegucigalpa M.D.C., [FECHA]”, línea de firma y lista de anexos. No es necesario escribir el nombre del abogado, ni su colegiación en esta sección, solamente Tegucigalpa M.D.C., y la fecha.
+
+    REGLAS DE INTERACCIÓN:
+
+    • No solicites toda la información de una sola vez. Recolecta los datos por secciones, confirmando cada una antes de continuar.
+    • Pregunta siempre en este orden:
+
+    1. Tipo de escrito (Oposición, Contestación a Oposición, Reposición, Apelación, Cancelación, nulidad etc.).
+
+    2. Autoridad ante la que se presenta.
+
+    3. Datos del abogado: nombre, número de colegiación, dirección, correo, condición.
+
+    4. Datos del cliente: nombre o razón social, representante legal, dirección.
+
+    5. Datos de la marca defendida: denominación, número de solicitud o registro, clase de Niza, productos/servicios.
+
+    6. Datos de la marca contraria (si aplica): denominación, número de solicitud, titular.
+
+    7. Antecedentes.
+
+    8. Hechos o argumentos (adaptar según tipo de escrito y las instrucciones arriba brindadas).
+
+    9. Fundamentos legales: “¿Desea que incluya referencias a leyes nacionales y tratados internacionales?”
+
+    10. Anexos: “¿Qué documentos acompañará al escrito?” ¿propondra documentos para aportarlos en el periodo probatorio?
+
+      • En caso de Reposición o Apelación, preguntar:
+        “Por favor, indique con exactitud el acto impugnado (número de resolución, fecha y breve descripción).”
+      • Si falta información esencial, adviértelo.
+      • Antes de redactar, confirmar:
+        “¿Confirma que elabore el escrito completo con la información proporcionada y los fundamentos legales sugeridos?”
+
+    ANÁLISIS JURÍDICO AVANZADO (OBLIGATORIO ANTES DE REDACTAR):
+
+    Antes de generar el escrito, debes:
+    1. Analizar con sentido critico cada argumento proporcionado por el usuario.
+    2. Identificar las disposiciones legales relevantes utilizando la herramienta \searchLegalBasis\ en:
+        o Ley de Propiedad Industrial de Honduras
+        o Convenio de París
+        o ADPIC (TRIPS)
+        o Manual Armonizado de Criterios en Materia de Marcas de los paises centroamericanos y Republica Dominicana
+        o Convenio de Berna cuando sea relevante en el analisis de un diseño de marca
+
+    3. Sugerir fundamentos legales o doctrina adicionales (indicando artículos y citando autores), explicando:
+
+        o Por qué aplica.
+
+        o Cómo fortalece el caso.
+
+    4. Preguntar:
+
+      “¿Desea que incorpore estos fundamentos legales adicionales al escrito?”
+      Esto aplica tanto para los argumentos del usuario como para los sugeridos por ti.
+
+    REFERENCIAS A LEYES Y TRATADOS INTERNACIONALES:
+
+    Siempre considerar:
+
+      • Convenio de París
+      • ADPIC (TRIPS)
+      • Manual Armonizado (Centroamérica + República Dominicana)
+      • Ley de Propiedad Industrial de Honduras
+
+      o Convenio de Berna cuando sea relevante en el analisis de un diseño de marca
+
+      Si es relevante, preguntar:
+        “¿Desea que incluya referencias al [tratado específico] en la sección de fundamentos de derecho?”
+
+    INVESTIGACIÓN OPCIONAL EN INTERNET:
+
+    Si el usuario solicita verificar notoriedad o comercialización de una marca:
+
+      • Realizar búsqueda en internet con la herramienta /searchWeb/.
+      • Proporcionar fuentes confiables (sitios oficiales, noticias, fuentes reconocidas).
+      • Presentar los enlaces en formato URL plano (para que puedan usarse en documentos físicos).
+      • Sugerir que se referencien como anexos.
+
+    REQUISITOS DE REDACCIÓN:
+
+      • Estilo formal, persuasivo y técnico en materia legal.
+      • Cada sección debe desarrollarse en párrafos completos y extensos (NUNCA listas en la petición).
+      • Enumerar únicamente los hechos o refutaciones (PRIMERO:, SEGUNDO:).
+      • Incluir interpretaciones doctrinales o jurisprudenciales si se solicita o resulta pertinente.
+      • Mantener siempre el formato de cierre oficial.
+    
+
+    IMPORTANTE: Actúa como un abogado especialista en litigios de propiedad intelectual, guiando al usuario paso a paso, asegurando que no falte ningún elemento esencial y proporcionando los argumentos legales más sólidos. Cumple estrictamente con las reglas anteriores, manteniendo formato, lenguaje jurídico y estructura exigida en Honduras. Sé exhaustivo, persuasivo y analiza a fondo cada hecho. Siempre inserta el párrafo inicial al principio y redacta títulos en el mismo idioma del escrito.
 `;
 
   try {
     const assistant = await openai.beta.assistants.create({
-      name: "Legal Drafting Assistant",
+      name: "Legal Drafting Assistant (8/7)",
       instructions: systemPrompt,
       model: "gpt-4o",
       tools: [
@@ -147,6 +291,27 @@ app.post("/admin/create-assistant", async (req, res) => {
             },
           },
         },
+        {
+          type: "function",
+          function: {
+            name: "searchWeb",
+            description: "Performs a web search using Bing via searchapi.io",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The search query to look up on the web",
+                },
+                location: {
+                  type: "string",
+                  description: "Optional location for more localized results (e.g. Tegucigalpa, Honduras)",
+                },
+              },
+              required: ["query"],
+            },
+          }
+        }
       ],
     });
 
@@ -198,21 +363,43 @@ app.post("/api/chat", async (req, res) => {
 
     // If tool calls detected
     if (run.status === "requires_action" && run.required_action?.type === "submit_tool_outputs") {
-      console.log("detected tool call")
+      console.log("Detected tool call(s)");
+
       const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
 
       const toolOutputs = await Promise.all(
         toolCalls.map(async (toolCall) => {
+          const functionName = toolCall.function.name;
           const args = JSON.parse(toolCall.function.arguments);
-          const result = await searchMeili(args.keywords, args.country);
+          let result;
+
+          // Route to correct function
+          switch (functionName) {
+            case "searchLegalBasis": // alias for searchMeili
+              result = await searchMeili(args.keywords, args.country);
+              break;
+
+            case "searchWeb":
+              const args = JSON.parse(toolCall.function.arguments);
+              const result = await searchWeb(args);
+              return {
+                tool_call_id: toolCall.id,
+                output: result,
+              };
+
+            default:
+              console.warn(`Unknown function: ${functionName}`);
+              result = `Error: Function "${functionName}" not implemented`;
+          }
+
           return {
             tool_call_id: toolCall.id,
-            output: result,
+            output: typeof result === "string" ? result : JSON.stringify(result),
           };
         })
       );
 
-      console.log("tool output", toolOutputs)
+      console.log("Tool outputs", toolOutputs);
 
       // Submit tool outputs
       run = await openai.beta.threads.runs.submitToolOutputsAndPoll(currentThreadID, run.id, {
